@@ -1,5 +1,6 @@
 #!/usr/bin/gjs
 
+imports.searchPath.unshift('.');
 const Gio = imports.gi.Gio;
 const GLib = imports.gi.GLib;
 const Gtk = imports.gi.Gtk;
@@ -7,6 +8,9 @@ const GdkPixbuf = imports.gi.GdkPixbuf;
 const Notify = imports.gi.Notify;
 const Pango = imports.gi.Pango;
 const Lang = imports.lang;
+const System = imports.system;
+const FedyCli = imports.cli.FedyCli;
+const ByteArray = imports.byteArray;
 
 const APP_NAME = "Fedy";
 
@@ -21,6 +25,8 @@ const Application = new Lang.Class({
 
         this.application.connect("activate", Lang.bind(this, this._onActivate));
         this.application.connect("startup", Lang.bind(this, this._onStartup));
+
+        this.cli = new FedyCli(this);
 
         Notify.init(APP_NAME);
     },
@@ -118,8 +124,8 @@ const Application = new Lang.Class({
 
             try {
                 let data = file.read(null).read_bytes(size, null).get_data();
-
-                parsed = JSON.parse(data);
+                let content = (data instanceof Uint8Array) ? ByteArray.toString(data) : data.toString();
+                parsed = JSON.parse(content);
             } catch (e) {
                 print("Error loading file " + file.get_path() + " : " + e.message);
             }
@@ -252,10 +258,11 @@ const Application = new Lang.Class({
                     try {
                         let stream = file.open_readwrite(null).get_input_stream();
                         let data = stream.read_bytes(size, null).get_data();
+                        let content = (data instanceof Uint8Array) ? ByteArray.toString(data) : data.toString();
 
                         stream.close(null);
 
-                        let lines = (data + "").split(/\n/);
+                        let lines = content.split(/\n/);
 
                         parts = parts.concat(lines);
                     } catch (e) {
@@ -710,4 +717,4 @@ const Application = new Lang.Class({
 
 let app = new Application();
 
-app.application.run(ARGV);
+app.application.run([System.programInvocationName].concat(ARGV));
